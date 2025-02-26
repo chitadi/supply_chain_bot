@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OpenAI } from '@langchain/openai';
-import { PDFLoader } from 'langchain/document_loaders/fs/pdf';
-import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
-import { MemoryVectorStore } from 'langchain/vectorstores/memory';
-import { OpenAIEmbeddings } from 'langchain/embeddings/openai';
+import { PDFLoader } from '@langchain/community/document_loaders/web/pdf';
+import { RecursiveCharacterTextSplitter } from '@langchain/core/document_transformers/text_splitter';
+import { MemoryVectorStore } from '@langchain/community/vectorstores/memory';
+import { OpenAIEmbeddings } from '@langchain/openai/embeddings';
 import path from 'path';
 
 // Initialize vector store
@@ -14,27 +14,28 @@ async function loadPDFs() {
   try {
     // Define PDF paths
     const pdfPaths = [
-      path.join(process.cwd(), 'public', 'fundamentals-of-supply-chain-management.pdf'),
-      path.join(process.cwd(), 'public', 'SupplyChainManagementStrategyPlanningandOperation.pdf')
+      '/fundamentals-of-supply-chain-management.pdf',
+      '/SupplyChainManagementStrategyPlanningandOperation.pdf'
     ];
     
     // Load and process each PDF
-    const docs = [];
+    let allDocs = [];
+    
     for (const pdfPath of pdfPaths) {
-      console.log(`Loading PDF: ${pdfPath}`);
-      const loader = new PDFLoader(pdfPath);
-      const pdfDocs = await loader.load();
-      docs.push(...pdfDocs);
+      // Create a blob URL for the PDF
+      const loader = new PDFLoader(`${process.env.VERCEL_URL || 'http://localhost:3000'}${pdfPath}`);
+      const docs = await loader.load();
+      allDocs = [...allDocs, ...docs];
     }
     
-    console.log(`Loaded ${docs.length} pages from PDFs`);
+    console.log(`Loaded ${allDocs.length} pages from PDFs`);
     
     // Split documents into chunks
     const textSplitter = new RecursiveCharacterTextSplitter({
       chunkSize: 1000,
       chunkOverlap: 200
     });
-    const splitDocs = await textSplitter.splitDocuments(docs);
+    const splitDocs = await textSplitter.splitDocuments(allDocs);
     
     console.log(`Split into ${splitDocs.length} chunks`);
     
