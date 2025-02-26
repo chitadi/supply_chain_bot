@@ -36,10 +36,19 @@ export async function POST(req: NextRequest) {
     // Load pre-processed PDF chunks
     let pdfChunks;
     try {
-      const response = await fetch(new URL('/pdf-chunks.json', req.url));
+      // In production, use the absolute URL
+      const baseUrl = process.env.VERCEL_URL 
+        ? `https://${process.env.VERCEL_URL}` 
+        : 'http://localhost:3000';
+      
+      console.log('Fetching PDF chunks from:', `${baseUrl}/pdf-chunks.json`);
+      const response = await fetch(`${baseUrl}/pdf-chunks.json`);
+      
       if (!response.ok) {
+        console.error('Failed to load PDF chunks:', response.status, response.statusText);
         throw new Error(`Failed to load PDF chunks: ${response.status} ${response.statusText}`);
       }
+      
       pdfChunks = await response.json();
       console.log(`Loaded ${pdfChunks.length} PDF chunks`);
     } catch (error) {
@@ -111,7 +120,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error in chat API:', error);
     return NextResponse.json(
-      { error: 'An error occurred during the request.' },
+      { error: error.message },
       { status: 500 }
     );
   }

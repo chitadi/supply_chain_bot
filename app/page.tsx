@@ -60,8 +60,8 @@ export default function Chat() {
     setLoading(true)
 
     try {
-      // Call API with all messages
-      const response = await fetch(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/chat', {
+      console.log('Sending messages to API:', messages);
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -72,6 +72,7 @@ export default function Chat() {
       })
 
       if (!response.ok) {
+        console.error('API response not OK:', response.status, response.statusText);
         throw new Error('Failed to fetch response')
       }
 
@@ -81,6 +82,7 @@ export default function Chat() {
       
       // Check if there's an error in the response
       if (data.error) {
+        console.error('Error in API response:', data.error);
         throw new Error(data.error);
       }
       
