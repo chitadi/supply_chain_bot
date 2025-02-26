@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
     // Call OpenAI
     const llm = new OpenAI({
       temperature: 0.7,
-      modelName: 'gpt-3.5-turbo',
+      modelName: 'gpt-4o-mini',
     });
     
     const result = await llm.invoke(promptMessages);
