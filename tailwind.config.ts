@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import { fontFamily } from "tailwindcss/defaultTheme";
 
 const config: Config = {
     darkMode: ["class"],
@@ -10,6 +11,10 @@ const config: Config = {
   ],
   theme: {
   	extend: {
+      fontFamily: {
+        'proxima-nova': ['var(--font-proxima-nova)', 'var(--font-inter)', ...fontFamily.sans],
+        'sans': ['var(--font-proxima-nova)', 'var(--font-inter)', ...fontFamily.sans],
+      },
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
@@ -88,9 +93,55 @@ const config: Config = {
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out'
-  		}
+  		},
+      typography: {
+        DEFAULT: {
+          css: {
+            maxWidth: '100%',
+            color: 'inherit',
+            p: {
+              marginTop: '1em',
+              marginBottom: '1em',
+            },
+            'ul, ol': {
+              paddingLeft: '1.5em',
+              marginTop: '1em',
+              marginBottom: '1em',
+            },
+            h1: {
+              fontWeight: '700',
+              marginTop: '1.5em',
+              marginBottom: '0.5em',
+            },
+            h2: {
+              fontWeight: '700',
+              marginTop: '1.5em',
+              marginBottom: '0.5em',
+            },
+            h3: {
+              fontWeight: '600',
+              marginTop: '1.5em',
+              marginBottom: '0.5em',
+            },
+            code: {
+              backgroundColor: '#f3f4f6',
+              borderRadius: '0.25rem',
+              padding: '0.2em 0.4em',
+            },
+            pre: {
+              backgroundColor: '#f3f4f6',
+              borderRadius: '0.25rem',
+              padding: '1em',
+              overflow: 'auto',
+            },
+          },
+        },
+      }
   	}
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    require("@tailwindcss/typography")
+  ],
 };
 export default config;

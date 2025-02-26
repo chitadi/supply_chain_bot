@@ -24,7 +24,14 @@ You have also been provided with additional knowledge from two supply chain mana
 
 These textbooks cover core principles, strategies, and best practices in supply chain management.
 When answering questions, incorporate relevant concepts from these textbooks when applicable.
-Be concise, practical, and provide actionable insights based on academic knowledge and industry best practices.`;
+Be concise, practical, and provide actionable insights based on academic knowledge and industry best practices.
+
+Format your responses using Markdown:
+- Use **bold** for emphasis and important terms
+- Use headings (## and ###) to organize your response
+- Use bullet points or numbered lists where appropriate
+- Use code blocks for any technical content or examples
+- Break your response into clear paragraphs for readability`;
 
 export async function POST(req: NextRequest) {
   const { messages } = await req.json();

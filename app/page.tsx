@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import { MessageSquare, Plus, SendIcon, PaperclipIcon } from "lucide-react"
 import Image from "next/image"
 import React from "react"
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 export default function Chat() {
   const [messages, setMessages] = useState([])
@@ -168,7 +170,16 @@ export default function Chat() {
                     : "bg-white text-gray-800 border border-gray-200 shadow-sm"
                 }`}
               >
-                {m.content}
+                {m.role === "assistant" ? (
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkGfm]}
+                    className="prose prose-sm max-w-none"
+                  >
+                    {m.content}
+                  </ReactMarkdown>
+                ) : (
+                  m.content
+                )}
               </div>
             </div>
           ))}
