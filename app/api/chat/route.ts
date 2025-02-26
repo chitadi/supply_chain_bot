@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OpenAI } from '@langchain/openai';
-import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
-import { RecursiveCharacterTextSplitter } from '@langchain/core/document_transformers/text_splitter';
-import { MemoryVectorStore } from '@langchain/community/vectorstores/memory';
-import { OpenAIEmbeddings } from '@langchain/openai';
+import { PDFLoader } from 'langchain/document_loaders/fs/pdf';
+import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
+import { MemoryVectorStore } from 'langchain/vectorstores/memory';
+import { OpenAIEmbeddings } from 'langchain/embeddings/openai';
 import path from 'path';
 
 // Initialize vector store
