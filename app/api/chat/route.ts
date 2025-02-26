@@ -14,8 +14,8 @@ async function loadPDFs() {
   try {
     // Define PDF paths
     const pdfPaths = [
-      path.join(process.cwd(), 'fundamentals-of-supply-chain-management.pdf'),
-      path.join(process.cwd(), 'SupplyChainManagementStrategyPlanningandOperation.pdf')
+      path.join(process.cwd(), 'public', 'fundamentals-of-supply-chain-management.pdf'),
+      path.join(process.cwd(), 'public', 'SupplyChainManagementStrategyPlanningandOperation.pdf')
     ];
     
     // Load and process each PDF
