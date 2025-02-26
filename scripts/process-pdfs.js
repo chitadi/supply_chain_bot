@@ -1,56 +1,66 @@
 const fs = require('fs');
 const path = require('path');
-const pdf = require('pdf-parse');
+const pdfParse = require('pdf-parse');
 
-async function processPDFs() {
+// Define PDF paths
+const pdfPaths = [
+  path.join(process.cwd(), 'public', 'fundamentals-of-supply-chain-management.pdf'),
+  path.join(process.cwd(), 'public', 'SupplyChainManagementStrategyPlanningandOperation.pdf')
+];
+
+// Function to extract text from a PDF
+async function extractTextFromPDF(pdfPath) {
   try {
-    // Define PDF paths
-    const pdfPaths = [
-      path.join(__dirname, '..', 'fundamentals-of-supply-chain-management.pdf'),
-      path.join(__dirname, '..', 'SupplyChainManagementStrategyPlanningandOperation.pdf')
-    ];
-    
-    // Load and process each PDF
-    const allChunks = [];
-    let chunkId = 0;
-    
-    for (const pdfPath of pdfPaths) {
-      console.log(`Processing ${pdfPath}...`);
-      const filename = path.basename(pdfPath);
-      const dataBuffer = fs.readFileSync(pdfPath);
-      
-      const data = await pdf(dataBuffer);
-      console.log(`PDF ${filename} has ${data.numpages} pages`);
-      
-      // Split text into chunks (simple approach - split by paragraphs)
-      const text = data.text;
-      const paragraphs = text.split(/\n\s*\n/);
-      
-      // Create chunks with some overlap
-      for (let i = 0; i < paragraphs.length; i++) {
-        const paragraph = paragraphs[i].trim();
-        if (paragraph.length > 20) { // Ignore very short paragraphs
-          allChunks.push({
-            id: chunkId++,
-            content: paragraph,
-            metadata: {
-              source: filename
-            }
-          });
-        }
-      }
-    }
-    
-    console.log(`Created ${allChunks.length} chunks from PDFs`);
-    
-    // Save to JSON file
-    const outputPath = path.join(__dirname, '..', 'public', 'pdf-chunks.json');
-    fs.writeFileSync(outputPath, JSON.stringify(allChunks, null, 2));
-    
-    console.log(`Saved ${allChunks.length} chunks to ${outputPath}`);
+    const dataBuffer = fs.readFileSync(pdfPath);
+    const data = await pdfParse(dataBuffer);
+    return data.text;
   } catch (error) {
-    console.error("Error processing PDFs:", error);
+    console.error(`Error extracting text from ${pdfPath}:`, error);
+    return '';
   }
 }
 
-processPDFs();
+// Function to split text into chunks
+function splitTextIntoChunks(text, chunkSize = 1000, overlap = 200) {
+  const chunks = [];
+  let i = 0;
+  
+  while (i < text.length) {
+    const chunk = text.slice(i, i + chunkSize);
+    chunks.push(chunk);
+    i += chunkSize - overlap;
+  }
+  
+  return chunks;
+}
+
+// Main function to process PDFs
+async function processPDFs() {
+  const allChunks = [];
+  
+  for (const pdfPath of pdfPaths) {
+    console.log(`Processing ${pdfPath}...`);
+    const text = await extractTextFromPDF(pdfPath);
+    const chunks = splitTextIntoChunks(text);
+    
+    chunks.forEach(chunk => {
+      allChunks.push({
+        text: chunk,
+        source: path.basename(pdfPath)
+      });
+    });
+    
+    console.log(`Extracted ${chunks.length} chunks from ${path.basename(pdfPath)}`);
+  }
+  
+  // Save chunks to JSON file
+  const outputPath = path.join(process.cwd(), 'public', 'pdf-chunks.json');
+  fs.writeFileSync(outputPath, JSON.stringify(allChunks, null, 2));
+  console.log(`Saved ${allChunks.length} chunks to ${outputPath}`);
+}
+
+// Run the script
+processPDFs().catch(error => {
+  console.error('Error processing PDFs:', error);
+  process.exit(1);
+});

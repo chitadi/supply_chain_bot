@@ -1,64 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OpenAI } from '@langchain/openai';
-import { PDFLoader } from '@langchain/community/document_loaders/web/pdf';
-import { RecursiveCharacterTextSplitter } from '@langchain/core/document_transformers/text_splitter';
-import { MemoryVectorStore } from '@langchain/community/vectorstores/memory';
-import { OpenAIEmbeddings } from '@langchain/openai/embeddings';
-import path from 'path';
 
-// Initialize vector store
-let vectorStore: MemoryVectorStore | null = null;
-
-// Function to load and process PDFs
-async function loadPDFs() {
-  try {
-    // Define PDF paths
-    const pdfPaths = [
-      '/fundamentals-of-supply-chain-management.pdf',
-      '/SupplyChainManagementStrategyPlanningandOperation.pdf'
-    ];
-    
-    // Load and process each PDF
-    let allDocs = [];
-    
-    for (const pdfPath of pdfPaths) {
-      // Create a blob URL for the PDF
-      const loader = new PDFLoader(`${process.env.VERCEL_URL || 'http://localhost:3000'}${pdfPath}`);
-      const docs = await loader.load();
-      allDocs = [...allDocs, ...docs];
-    }
-    
-    console.log(`Loaded ${allDocs.length} pages from PDFs`);
-    
-    // Split documents into chunks
-    const textSplitter = new RecursiveCharacterTextSplitter({
-      chunkSize: 1000,
-      chunkOverlap: 200
-    });
-    const splitDocs = await textSplitter.splitDocuments(allDocs);
-    
-    console.log(`Split into ${splitDocs.length} chunks`);
-    
-    // Create vector store
-    vectorStore = await MemoryVectorStore.fromDocuments(
-      splitDocs,
-      new OpenAIEmbeddings()
-    );
-    
-    return true;
-  } catch (error) {
-    console.error("Error loading PDFs:", error);
-    return false;
-  }
-}
-
-// System message with supply chain expertise
-const systemMessage = {
+// System message template
+const systemMessageTemplate = {
   role: "system",
-  content: `You are an expert Supply Chain Management AI Assistant with deep knowledge across:
-  - Inventory Management & Optimization
-  - Demand Forecasting & Planning
+  content: `You are a knowledgeable supply chain management assistant.
+  You can help with various aspects of supply chain management, including:
+  - Inventory Management
   - Logistics & Transportation
+  - Demand Forecasting
   - Procurement & Supplier Management
   - Warehouse Operations
   - Supply Chain Analytics
@@ -79,47 +29,70 @@ export async function POST(req: NextRequest) {
   const userMessage = messages[messages.length - 1].content;
   
   try {
-    // Load PDFs if not already loaded
-    if (!vectorStore) {
-      console.log("Loading PDFs...");
-      await loadPDFs();
+    // Load pre-processed PDF chunks from JSON file
+    const response = await fetch('/pdf-chunks.json');
+    const pdfChunks = await response.json();
+    
+    // Simple search function to find relevant chunks
+    function findRelevantChunks(query, chunks, maxResults = 5) {
+      // Convert query to lowercase for case-insensitive matching
+      const lowerQuery = query.toLowerCase();
+      
+      // Score each chunk based on how many query terms it contains
+      const scoredChunks = chunks.map(chunk => {
+        const lowerText = chunk.text.toLowerCase();
+        // Simple scoring: count occurrences of query terms
+        const score = lowerQuery.split(' ')
+          .filter(term => term.length > 3) // Only consider meaningful terms
+          .reduce((score, term) => {
+            const regex = new RegExp(term, 'gi');
+            const matches = (lowerText.match(regex) || []).length;
+            return score + matches;
+          }, 0);
+          
+        return { ...chunk, score };
+      });
+      
+      // Sort by score and take top results
+      return scoredChunks
+        .filter(chunk => chunk.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, maxResults);
     }
     
-    // Search for relevant context from the PDFs
-    let relevantContext = '';
-    if (vectorStore) {
-      console.log("Searching for relevant context...");
-      const results = await vectorStore.similaritySearch(userMessage, 5);
-      if (results.length > 0) {
-        relevantContext = `Here's some relevant information from the supply chain management textbooks:\n\n`;
-        results.forEach((doc, i) => {
-          relevantContext += `[Source: ${doc.metadata.source || 'textbook'}, Page: ${doc.metadata.loc?.pageNumber || 'unknown'}]\n${doc.pageContent}\n\n`;
-        });
-      }
+    // Find relevant chunks based on user query
+    const relevantChunks = findRelevantChunks(userMessage, pdfChunks);
+    
+    // Create context from relevant chunks
+    let context = '';
+    if (relevantChunks.length > 0) {
+      context = 'Here is some relevant information from the textbooks:\n\n';
+      relevantChunks.forEach(chunk => {
+        context += `From "${chunk.source}":\n${chunk.text}\n\n`;
+      });
     }
     
-    // Create enhanced system message with relevant context
-    const enhancedSystemMessage = {
-      role: "system",
-      content: systemMessage.content + (relevantContext ? `\n\nAdditional context for this query:\n${relevantContext}` : '')
-    };
-    
-    // Create message array with enhanced system message
-    const enhancedMessages = [
-      enhancedSystemMessage,
-      ...messages
+    // Prepare messages for OpenAI
+    const promptMessages = [
+      systemMessageTemplate,
+      ...messages.slice(0, -1),
+      { role: "user", content: context + "\n\nUser question: " + userMessage }
     ];
     
-    // Call OpenAI API
-    const response = await OpenAI.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: enhancedMessages,
+    // Call OpenAI
+    const llm = new OpenAI({
+      temperature: 0.7,
+      modelName: 'gpt-3.5-turbo',
     });
     
-    // Return the response
-    return NextResponse.json(response.choices[0].message);
+    const result = await llm.invoke(promptMessages);
+    
+    return NextResponse.json({ result });
   } catch (error) {
-    console.error("Error in chat route:", error);
-    return NextResponse.json({ error: "An error occurred during the request." }, { status: 500 });
+    console.error('Error in chat API:', error);
+    return NextResponse.json(
+      { error: 'An error occurred during the request.' },
+      { status: 500 }
+    );
   }
 }

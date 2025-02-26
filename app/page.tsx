@@ -83,7 +83,7 @@ export default function Chat() {
         {
           id: Date.now().toString(),
           role: "assistant",
-          content: data.content
+          content: data.result?.content || data.result || "I couldn't process that request properly."
         }
       ])
     } catch (error) {
