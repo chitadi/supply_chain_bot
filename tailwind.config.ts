@@ -12,8 +12,7 @@ const config: Config = {
   theme: {
   	extend: {
       fontFamily: {
-        'proxima-nova': ['var(--font-proxima-nova)', 'var(--font-inter)', ...fontFamily.sans],
-        'sans': ['var(--font-proxima-nova)', 'var(--font-inter)', ...fontFamily.sans],
+        'sans': ['var(--font-inter)', ...fontFamily.sans],
       },
   		colors: {
   			background: 'hsl(var(--background))',
