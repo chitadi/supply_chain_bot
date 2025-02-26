@@ -22,6 +22,14 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
+  output: 'standalone',
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /\.(pdf)$/i,
+      type: 'asset/resource',
+    });
+    return config;
+  },
 }
 
 mergeConfig(nextConfig, userConfig)
