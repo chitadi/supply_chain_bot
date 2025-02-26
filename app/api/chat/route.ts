@@ -30,8 +30,17 @@ export async function POST(req: NextRequest) {
   
   try {
     // Load pre-processed PDF chunks from JSON file
-    const response = await fetch('/pdf-chunks.json');
+    const response = await fetch(process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}/pdf-chunks.json` 
+      : 'http://localhost:3000/pdf-chunks.json');
+    
+    if (!response.ok) {
+      console.error('Failed to load PDF chunks:', response.status, response.statusText);
+      throw new Error('Failed to load PDF chunks');
+    }
+    
     const pdfChunks = await response.json();
+    console.log(`Loaded ${pdfChunks.length} PDF chunks`);
     
     // Simple search function to find relevant chunks
     function findRelevantChunks(query, chunks, maxResults = 5) {
@@ -83,11 +92,21 @@ export async function POST(req: NextRequest) {
     const llm = new OpenAI({
       temperature: 0.7,
       modelName: 'gpt-4o-mini',
+      openAIApiKey: process.env.OPENAI_API_KEY,
     });
     
-    const result = await llm.invoke(promptMessages);
-    
-    return NextResponse.json({ result });
+    console.log('Calling OpenAI API...');
+    try {
+      const result = await llm.invoke(promptMessages);
+      console.log('OpenAI API call successful');
+      return NextResponse.json({ result });
+    } catch (error) {
+      console.error('Error calling OpenAI API:', error);
+      return NextResponse.json(
+        { error: 'An error occurred during the OpenAI API call.' },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error('Error in chat API:', error);
     return NextResponse.json(

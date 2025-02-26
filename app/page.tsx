@@ -77,13 +77,20 @@ export default function Chat() {
 
       const data = await response.json()
       
+      console.log('API response:', data);
+      
+      // Check if there's an error in the response
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
       // Add assistant message to chat
       setMessages(prev => [
         ...prev, 
         {
           id: Date.now().toString(),
           role: "assistant",
-          content: data.result?.content || data.result || "I couldn't process that request properly."
+          content: data.result?.content || data.result?.text || data.result || "I couldn't process that request properly."
         }
       ])
     } catch (error) {
