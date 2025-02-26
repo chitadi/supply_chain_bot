@@ -1,46 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { OpenAI } from '@langchain/openai';
+import OpenAI from 'openai';
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 // System message template
-const systemMessageTemplate = {
-  role: "system",
-  content: `You are a knowledgeable supply chain management assistant.
-  You can help with various aspects of supply chain management, including:
-  - Inventory Management
-  - Logistics & Transportation
-  - Demand Forecasting
-  - Procurement & Supplier Management
-  - Warehouse Operations
-  - Supply Chain Analytics
-  - Risk Management & Resilience
-  - Sustainability in Supply Chain
-  
-  You have also been provided with additional knowledge from two supply chain management textbooks:
-  1. "Fundamentals of Supply Chain Management"
-  2. "Supply Chain Management: Strategy, Planning, and Operation"
-  
-  These textbooks cover core principles, strategies, and best practices in supply chain management.
-  When answering questions, incorporate relevant concepts from these textbooks when applicable.
-  Be concise, practical, and provide actionable insights based on academic knowledge and industry best practices.`
-};
+const systemMessageTemplate = `You are a knowledgeable supply chain management assistant.
+You can help with various aspects of supply chain management, including:
+- Inventory Management
+- Logistics & Transportation
+- Demand Forecasting
+- Procurement & Supplier Management
+- Warehouse Operations
+- Supply Chain Analytics
+- Risk Management & Resilience
+- Sustainability in Supply Chain
+
+You have also been provided with additional knowledge from two supply chain management textbooks:
+1. "Fundamentals of Supply Chain Management"
+2. "Supply Chain Management: Strategy, Planning, and Operation"
+
+These textbooks cover core principles, strategies, and best practices in supply chain management.
+When answering questions, incorporate relevant concepts from these textbooks when applicable.
+Be concise, practical, and provide actionable insights based on academic knowledge and industry best practices.`;
 
 export async function POST(req: NextRequest) {
   const { messages } = await req.json();
   const userMessage = messages[messages.length - 1].content;
   
   try {
-    // Load pre-processed PDF chunks from JSON file
-    const response = await fetch(process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}/pdf-chunks.json` 
-      : 'http://localhost:3000/pdf-chunks.json');
+    console.log('Processing request for:', userMessage);
     
-    if (!response.ok) {
-      console.error('Failed to load PDF chunks:', response.status, response.statusText);
-      throw new Error('Failed to load PDF chunks');
+    // Load pre-processed PDF chunks
+    let pdfChunks;
+    try {
+      const response = await fetch(new URL('/pdf-chunks.json', req.url));
+      if (!response.ok) {
+        throw new Error(`Failed to load PDF chunks: ${response.status} ${response.statusText}`);
+      }
+      pdfChunks = await response.json();
+      console.log(`Loaded ${pdfChunks.length} PDF chunks`);
+    } catch (error) {
+      console.error('Error loading PDF chunks:', error);
+      pdfChunks = [];
     }
-    
-    const pdfChunks = await response.json();
-    console.log(`Loaded ${pdfChunks.length} PDF chunks`);
     
     // Simple search function to find relevant chunks
     function findRelevantChunks(query, chunks, maxResults = 5) {
@@ -71,6 +76,7 @@ export async function POST(req: NextRequest) {
     
     // Find relevant chunks based on user query
     const relevantChunks = findRelevantChunks(userMessage, pdfChunks);
+    console.log(`Found ${relevantChunks.length} relevant chunks`);
     
     // Create context from relevant chunks
     let context = '';
@@ -83,30 +89,25 @@ export async function POST(req: NextRequest) {
     
     // Prepare messages for OpenAI
     const promptMessages = [
-      systemMessageTemplate,
+      { role: "system", content: systemMessageTemplate },
       ...messages.slice(0, -1),
-      { role: "user", content: context + "\n\nUser question: " + userMessage }
+      { role: "user", content: context ? `${context}\n\nUser question: ${userMessage}` : userMessage }
     ];
     
-    // Call OpenAI
-    const llm = new OpenAI({
+    console.log('Calling OpenAI API...');
+    
+    // Call OpenAI API directly
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: promptMessages,
       temperature: 0.7,
-      modelName: 'gpt-4o-mini',
-      openAIApiKey: process.env.OPENAI_API_KEY,
     });
     
-    console.log('Calling OpenAI API...');
-    try {
-      const result = await llm.invoke(promptMessages);
-      console.log('OpenAI API call successful');
-      return NextResponse.json({ result });
-    } catch (error) {
-      console.error('Error calling OpenAI API:', error);
-      return NextResponse.json(
-        { error: 'An error occurred during the OpenAI API call.' },
-        { status: 500 }
-      );
-    }
+    console.log('OpenAI API call successful');
+    
+    return NextResponse.json({
+      content: completion.choices[0].message.content
+    });
   } catch (error) {
     console.error('Error in chat API:', error);
     return NextResponse.json(

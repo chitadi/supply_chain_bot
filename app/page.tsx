@@ -61,7 +61,7 @@ export default function Chat() {
 
     try {
       // Call API with all messages
-      const response = await fetch('/api/chat', {
+      const response = await fetch(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -90,7 +90,7 @@ export default function Chat() {
         {
           id: Date.now().toString(),
           role: "assistant",
-          content: data.result?.content || data.result?.text || data.result || "I couldn't process that request properly."
+          content: data.content || "I couldn't process that request properly."
         }
       ])
     } catch (error) {
