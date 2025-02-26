@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useChat } from "@ai-sdk/react"
-import { SendIcon, PaperclipIcon, MessageSquare, Plus } from "lucide-react"
+import { MessageSquare, Plus, SendIcon, PaperclipIcon } from "lucide-react"
 import Image from "next/image"
 import React from "react"
 
 export default function Chat() {
-  const { messages, input, handleInputChange, handleSubmit, setInput, setMessages } = useChat()
+  const [messages, setMessages] = useState([])
+  const [input, setInput] = useState("")
+  const [loading, setLoading] = useState(false)
   const [chats, setChats] = useState([{ id: "1", title: "Supply Chain Expert" }])
   const [currentChatId, setCurrentChatId] = useState("1")
 
@@ -37,6 +38,68 @@ export default function Chat() {
       }
     ])
     setInput("") // Clear input field
+  }
+
+  const handleInputChange = (e) => {
+    setInput(e.target.value)
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!input.trim()) return
+
+    // Add user message to chat
+    const userMessage = {
+      id: Date.now().toString(),
+      role: "user",
+      content: input
+    }
+    
+    setMessages(prev => [...prev, userMessage])
+    setInput("")
+    setLoading(true)
+
+    try {
+      // Call API with all messages
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [...messages, userMessage].filter(m => m.id !== "welcome")
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch response')
+      }
+
+      const data = await response.json()
+      
+      // Add assistant message to chat
+      setMessages(prev => [
+        ...prev, 
+        {
+          id: Date.now().toString(),
+          role: "assistant",
+          content: data.content
+        }
+      ])
+    } catch (error) {
+      console.error('Error:', error)
+      // Add error message
+      setMessages(prev => [
+        ...prev, 
+        {
+          id: Date.now().toString(),
+          role: "assistant",
+          content: "Sorry, there was an error processing your request. Please try again."
+        }
+      ])
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleFileUpload = (event) => {
@@ -126,4 +189,3 @@ export default function Chat() {
     </div>
   )
 }
-
