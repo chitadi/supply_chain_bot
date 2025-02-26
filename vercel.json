@@ -1,15 +1,4 @@
 {
-  "version": 2,
   "buildCommand": "next build",
-  "outputDirectory": ".next",
-  "installCommand": "npm install",
-  "framework": "nextjs",
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/" }
-  ],
-  "functions": {
-    "app/api/chat/route.ts": {
-      "runtime": "nodejs18"
-    }
-  }
+  "framework": "nextjs"
 }
